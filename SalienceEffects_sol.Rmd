@@ -1,0 +1,700 @@
+
+#< ignore
+```{r "_"}
+#library(restorepoint)
+# facilitates error detection
+#set.restore.point.options(display.restore.point=!TRUE)
+
+library(RTutor)
+library(yaml)
+#library(restorepoint)
+setwd("C:/Users/IngmarBuri/Desktop/RTutor")
+ps.name = "SalienceEffects"; sol.file = paste0(ps.name,"_sol.Rmd")
+libs = c("foreign", "dplyr", "ggplot2", "stargazer","lfe","readstata13") # character vector of all packages you load in the problem set
+#name.rmd.chunks(sol.file) # set auto chunk names in this file
+create.ps(sol.file=sol.file, ps.name=ps.name,user.name=NULL,libs=libs,stop.when.finished=FALSE, addons="quiz")
+#traceback()
+show.shiny.ps(ps.name, load.sav=FALSE,  sample.solution=FALSE, is.solved=FALSE, catch.errors=TRUE, launch.browser=TRUE)
+stop.without.error()
+```
+#>
+
+## Exercise 1 Overview
+
+### Welcome!
+
+This is an interactive RTutor worksheet that I have written in the course of my Bachelor thesis
+at Ulm University. This worksheet will help you to reproduce and understand the results of the
+research paper "Automatic Bill Payment and Salience Effects: Evidence from Electricity Consumption"
+by Steven Sexton(first published May 2015 in Review of Economics and Statistics, Volume 97, Issue 2,
+Page 229-241) which can be viewed and downloaded [here](http://www.mitpressjournals.org/doi/pdf/10.1162/REST_a_00465).
+The study seeks to empirically assess whether Automatic Bill Payment(ABP) and Budget Billing(BB)
+affect electricity consumption.
+The datasets used by the author in this study contain monthly observations of residential and
+commercial electricity consumers in South Carolina.
+
+
+### __Structure__
+
+**Exercise 1: Overview**
+
+**Exercise 2: Introduction**
+
+**Exercise 3: Getting to know the data**
+
+**Exercise 4: All Residential Accounts**
+
+**Exercise 5: Recent Residential Accounts**
+
+**Exercise 6: Residential Energy Smart Accounts**
+
+**Exercise 7: Residential Standard Accounts**
+
+**Exercise 8: Resdiential Summer Conserving Accounts**
+
+**Exercise 9: Residential Falsifications**
+
+**Exercise 10: Residential Matched Falsifications**
+
+**Exercise 11: Business Accounts**
+
+
+
+
+## Exercise 2 -- Introduction
+
+Let's start by looking at the dataset of all residential electricity consumers. The dataset is saved
+in the file `Resdntal.dta`. To be able to work with the data it has to be read in first.
+R provides many useful functions to read in data of various formats. To read `.dta` files though
+you have to extend R's base functionality. Whenever you are missing some functionality in R, have a look
+at the R package library (https://cran.r-project.org/). You can easily download packages from there
+with the following syntax: `install.packages("package-name")`. To read a `.dta` file you need the function
+`read.dta()`. It is part of the package `foreign`.
+
+
+#< quiz "installing"
+question: How would you install the package named `foreign`(don't forget the "" around the package name)?
+answer: install.packages("foreign")
+#>
+
+
+This problemset already contains all required packages so you don't have to install any.
+However to be able to use the functionality offered by an installed package you have to
+make the code contained in the package accessible before every session with the command `library(package-name)`. Notice how the quotes
+around the package-name argument for the function `library()` are not necessary (unlike for the function `install.packages()` from earlier).
+In the following exercises you should not use quotes for the package-name argument of `library()`. If you do, your answer will not be recognized
+as correct.
+
+As you have already learned you need the function `read.dta()` from the package `foreign` to be able to read 
+`.dta` files. The `read.dta()` function takes as argument the name of the file including the file ending `.dta`
+in quotes. 
+There is one last thing you have to know before you can start doing your first exercise.
+You can assign data by writing `variable-name = ` followed by in our case a call to the
+function `read.dta()`. This function will return data and it will be stored in the variable.
+
+```{r "2_1"}
+#< task
+# Load the package foreign(make the code of the package accessible).
+
+#>
+library(foreign)
+#< task
+# Read and assign the data in the file Resdntal.dta to the variable res. Enter your code here:
+
+#>
+res = read.dta("Resdntal.dta")
+#< hint
+display("You assign the data you want to load to the variable res. You therefore write: res = ... Now you add read.dta(). In the parenthesis you write the 
+name of the file you want to read. Don't forget to put quotes around the file name. Then click check.")
+#>
+
+```
+#< award "Importing data is important!"
+Great! You solved the first exercise and managed to import the data! Importing data is the first step on our way to analyze it.
+
+There will be some awards to win in this problem set. You can easily look at them by typing `awards()` in the code box and click *run chunk*. 
+#>
+
+To get an idea about how the data looks like you can look at the head of the table with the command `head(data_name)`. Try it out if you want. 
+<br>*You do not need to solve this exercise to be able to go on with the next task. Instead of using `head()` you can also click the button data*.
+
+```{r "2_2",optional=TRUE}
+#< task
+# If you want you can look at the data with the head() command. Enter your code here:
+
+#>
+head(res)
+```
+
+
+
+## Exercise 3 -- Getting to know the data
+
+Now that we have access to our data, we can try to check if ABP and BB really do have an effect on
+electricity consumption and in which direction the effect goes. The assumption of the author is that it
+should have an effect because both ABP and BB should reduce price salience. We can find out about the
+size and the direction of the effect by running a regression. First we would like to know how the electricity
+consumption, which is in the variable `ln_cons_per_day`, is affected by whether a consumer's electricity
+bill is payed automatically. Whether that is the case was measured in the variable `abp`. In the dataset
+`abp` is zero if the person was not enrolled in ABP at the time of the current billing period and 1 otherwise.
+`abp` is therefore a dummy variable.
+
+#< info "What is a dummy variable?"
+A dummy variable is used to differentiate between two categories. The two categories are encoded with 1 and 0.
+Gender for example can be stored in a dummy variable. Typically the name of the dummy variable is chosen
+to be one of the two categories. The category that is chosen as name of the dummy variable will be encoded with 1
+and the other category with 0. To make a dummy variable for gender you would name the variable `female` (`male`)
+and encode `female` (`male`) as 1 and `male` (`female`) as 0.
+The category that is encoded with 0 is called the base group.
+The slope parameter of a dummy variable tells us how much higher or lower the dependent variable
+is on average for the other group compared to the base group given that all other variables are fixed.
+
+*Source: Wooldridge,Introductory Econometrics (2012), p.227 ff.,
+from the free electronic version at: http://economics.ut.ac.ir/documents/3030266/14100645/Jeffrey_M._Wooldridge_Introductory_Econometrics_A_Modern_Approach__2012.pdf*
+#>
+
+To get an estimation of how much more electricity was on average consumed when bills were payed automatically
+compared to manual payments we have to estimate this number statistically. We presume a linear relationship
+between the variables `ln_cons_per_day` and `abp`.
+This relationship can mathematically expressed in the folling way:
+$$ln\_cons\_per\_day_{i} = \beta_{0} + \beta_{1} * abp_{i} + u_{i} $$
+
+There are different ways to estimate a number for beta. We are going to use a method called
+ordinary least squares(OLS) as the author did.
+
+
+R has a built in function `lm()` that let's us do OLS regression. The syntax is as follows:
+First you write the name of the independent variable on the left of the `~`-symbol. Then you write
+the explanatory variable(s) on the right seperated by a `+`. Additionally you have to specify
+the name of the data frame that contains the variables that are used in the regression.
+In our case this amounts to.
+`lm(ln_cons_per_day ~ abp,data=res)`.
+Let's try this out:
+
+```{r "3_1"}
+
+#< task 
+res=foreign::read.dta("Resdntal.dta")
+# regression with abp:  
+lm(ln_cons_per_day ~ abp,data=res)
+#>
+```
+
+As you can see in the exercise you can also access a specific function of a package by writing
+`package-name::function()`. This way you can use functions of packages without having to call
+`library(package-name)` beforehand. In this sessions we have called `library(foreign)` already. So `read.dta()`
+would have worked without `foreign::` .
+
+```{r "3_2"}
+#< task
+# regression with bb
+# do the same regression but instead of abp use bb: Replace the ???
+# and then delete the # sign before you click check
+# lm(ln_cons_per_day ~ ???,data=res)
+
+#>
+lm(ln_cons_per_day ~ bb,data=res)
+#< hint
+display("Make sure you have deleted the # sign!")
+#>
+```
+
+As you can see the result is not quite as one would expect. Being part of the abp
+program does not seem to raise electricity consumption. But taking part in bb does increase
+electricity consumption. Taking part in either of these programs should increase electricity 
+consumption.
+These results can't be trusted however as they suffer strongly from omitted variable bias which
+means that there are many other things that influence abp or bb which we haven't incorporated
+in our regression yet. The following regressions contain the most important other influence
+factors and should therefore be a more accurate estimate of the true effect. We are going to 
+use the function `felm` from the `lfe` package for the following regressions.
+
+
+## Exercise 4 -- All Residential Accounts
+
+You have already run a simple linear regression on the dataset that contains
+observations of all (and only) residential electricity consumers. On the same dataset we 
+are going to run the regressions the author ran. As you can see they contain
+more variables to account for other influences that should have an affect on 
+electricity consumption as well.
+
+```{r "4_1"}
+#< task 
+res=foreign::read.dta("Resdntal.dta")
+# slim down the dataset by chosing all variables that we need
+# and drop the remaining variables
+res = dplyr::select(res,ln_cons_per_day,abp,bb,abp_X_bb_ever,
+                       bb_X_abp_ever,acct_seq,
+                       acct_seq_X_abp_ever,acct_seq2,acct_seq3,
+                       year_month,month,zip5,id_rate_code)
+#>
+```
+
+```{r "4_2"}
+#< task 
+
+felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res)
+#>
+```
+
+```{r "4_3"}
+#< task 
+
+felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res)
+#>
+```
+
+Great now the next step is to display our regression results in a nice formatted way.
+The package `stargazer` can be used for this.
+
+```{r "4_4",results='asis'}
+#< task 
+# Display the regression results stored in felm1 and felm2 in one table.
+library(stargazer)
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+
+
+## Exercise 5 -- Recent Residential Accounts
+
+In this exercise we are going to run the same regressions as in exercise 4 
+but on a subset of the dataset that we used there. Here we look only at observations
+of accounts that were initiated in the year 2000 or later. These observations
+are in the file `rsd_recent.dta`.
+
+
+```{r "5_1"}
+#< task 
+res_recent = read.dta("rsd_recent.dta")
+#>
+```
+
+```{r "5_2"}
+#< task 
+
+rec_felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_recent)
+#>
+```
+
+```{r "5_3"}
+#< task 
+
+rec_felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_recent)
+#>
+```
+
+```{r "5_4",results='asis'}
+#< task 
+# Now display the regression results stored in rec_felm1 and rec_felm2
+# in one table. Look at exercise 4 if you have forgotten how to do it.
+# The precision should be 8 digits like before.
+
+#>
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+```
+
+## Exercise 6 -- Residential Energy Smart Accounts
+
+This data looks only at residential consumers who are in the rate class for new and
+retrofitted energy-efficient homes.
+
+```{r "6_1_1"}
+#< task 
+res_en_sm = read.dta("ResEnSm.dta")
+
+felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_en_sm)
+#>
+```
+
+```{r "6_1_2"}
+#< task 
+
+felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_en_sm)
+#>
+```
+
+```{r "6_1_3",results='asis'}
+#< task 
+# Display the regression results stored in felm1 and felm2 in one table.
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+
+```{r "6_2_1"}
+#< task 
+res_en_sm_rec = read.dta("res_en_sm_rec.dta")
+
+rec_felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_en_sm_rec)
+#>
+```
+
+```{r "6_2_2"}
+#< task 
+
+rec_felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_en_sm_rec)
+#>
+```
+
+```{r "6_2_3",results='asis'}
+#< task 
+# Now display the regression results stored in rec_felm1 and rec_felm2
+# in one table. 
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 7 -- Residential Standard Accounts
+
+This data looks only at residential consumers who are in the standard rate class.
+
+```{r "7_1_1"}
+#< task 
+res_std = read.dta("ResStd.dta")
+
+felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_std)
+#>
+```
+
+```{r "7_1_2"}
+#< task 
+
+felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_std)
+#>
+```
+
+```{r "7_1_3",results='asis'}
+#< task 
+# Display the regression results stored in felm1 and felm2 in one table.
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+
+```{r "7_2_1"}
+#< task 
+res_std_rec = read.dta("res_std_rec.dta")
+
+rec_felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_std_rec)
+#>
+```
+
+```{r "7_2_2"}
+#< task 
+
+rec_felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_std_rec)
+#>
+```
+
+```{r "7_2_3",results='asis'}
+#< task 
+# Now display the regression results stored in rec_felm1 and rec_felm2
+# in one table. 
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 8 -- Residential Summer Conserving Accounts
+
+This data looks only at residential consumers who are in the summer conserving rate
+class. Consumers in this rate class have a discounted rate but in exchange for that undertake to consume
+maximally as much as a value that is determined relative to own winter consumption.
+
+```{r "8_1_1"}
+#< task 
+res_summ_cons = read.dta("ResSummerCons.dta")
+
+felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_summ_cons)
+#>
+```
+
+```{r "8_1_2"}
+#< task 
+ 
+felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_summ_cons)
+#>
+```
+
+```{r "8_1_3",results='asis'}
+#< task 
+# Display the regression results stored in felm1 and felm2 in one table.
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+
+```{r "8_2_1"}
+#< task 
+res_summcon_rec = read.dta("res_summ_cons_rec.dta")
+ 
+rec_felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                exactDOF = TRUE,data=res_summcon_rec)
+#>
+```
+
+```{r "8_2_2"}
+#< task  
+
+rec_felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_summcon_rec)
+#>
+```
+
+```{r "8_2_3",results='asis'}
+#< task 
+# Now display the regression results stored in rec_felm1 and rec_felm2
+# in one table. 
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 9 -- Residential Falsifications
+
+
+
+```{r "9_1_1"}
+#< task 
+res=read.dta("Resdntal.dta")
+
+felm1=lfe::felm(ln_cons_per_day~pseudo_abp_13+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+#>
+```
+
+```{r "9_1_2"}
+#< task 
+
+felm2=lfe::felm(ln_cons_per_day~pseudo_abp_16+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+#>
+```
+
+```{r "9_1_3"}
+#< task 
+
+felm3=lfe::felm(ln_cons_per_day~pseudo_abp_19+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+#>
+```
+
+```{r "9_1_4"}
+#< task 
+
+felm4=lfe::felm(ln_cons_per_day~pseudo_abp_22+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+#>
+```
+
+```{r "9_1_5"}
+#< task 
+ 
+felm5=lfe::felm(ln_cons_per_day~pseudo_abp_25+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+#>
+```
+
+Great now the next step is to display our regression results in a nice formatted way.
+
+```{r "9_1_6",results='asis'}
+#< task 
+# Display the regression results stored in felm1 and felm2 in one table.
+stargazer(felm1,felm2,felm3,felm4,felm5,type="html",digits=8)
+#>
+```
+
+## Exercise 10 -- Residential Matched Falsifications
+
+
+
+```{r "10_1_1"}
+#< task 
+res_fa_ma=read.dta("ResFaMa.dta")
+
+felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res_fa_ma,abp_centered_date <= -1 | is.na(abp_centered_date)))
+#>
+```
+
+Great now the next step is to display our regression results in a nice formatted way.
+As you should know now, the package `stargazer` can be used for this.
+
+```{r "10_1_2",results='asis'}
+#< task 
+# Display the regression results stored in felm1.
+stargazer(felm1,type="html",digits=8)
+#>
+```
+
+## Exercise 11 -- Business Accounts
+
+In this exercise we are going to analyse a dataset that contains business accounts exclusively.
+
+```{r "11_1_1"}
+#We need another function to read in this `.dta` file since
+#this `.dta` file is slightly different than the other `.dta` files
+#that we have read in so far.
+#< task 
+library(readstata13)
+business = read.dta13("Business.dta")
+
+felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=business)
+#>
+```
+```{r "11_1_2"}
+#< task 
+ 
+felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=business)
+#>
+```
+Great now the next step is to display our regression results in a nice formatted way.
+As you should know now, the package `stargazer` can be used for this.
+
+```{r "11_1_3",results='asis'}
+#< task 
+# Display the regression results stored in felm1 and felm2 in one table.
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+
+```{r "11_2_1"}
+#< task 
+business_rec = readstata13::read.dta13("Business_rec.dta")
+ 
+rec_felm1=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                exactDOF = TRUE,data=business_rec)
+#>
+```
+
+```{r "11_2_2"}
+#< task 
+
+rec_felm2=lfe::felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=business_rec)
+#>
+```
+
+```{r "11_2_3",results='asis'}
+#< task 
+# Now display the regression results stored in rec_felm1 and rec_felm2
+# in one table.
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
